@@ -1,0 +1,92 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Teacher {
+  id              String           @id @default(uuid())
+  name            String
+  subjects        String[]         // Array of subjects
+  timetables      Timetable[]
+  assignedClasses TeacherClass[]   // Classes this teacher is assigned to
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+// Junction table for Teacher-Class assignment
+model TeacherClass {
+  id        String   @id @default(uuid())
+  teacherId String
+  classId   String
+  teacher   Teacher  @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  class     Class    @relation(fields: [classId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([teacherId, classId])
+}
+
+model Class {
+  id              String         @id @default(uuid())
+  name            String         @unique
+  sections        Section[]
+  assignedTeachers TeacherClass[] // Teachers assigned to this class
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+}
+
+model Section {
+  id         String      @id @default(uuid())
+  name       String
+  classId    String
+  class      Class       @relation(fields: [classId], references: [id], onDelete: Cascade)
+  timetables Timetable[]
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([classId, name])
+}
+
+model TimePeriod {
+  id         String      @id @default(uuid())
+  periodName String
+  startTime  String
+  endTime    String
+  isBreak    Boolean     @default(false)
+  orderIndex Int
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  timetables Timetable[]
+
+  @@unique([orderIndex])
+}
+
+model Timetable {
+  id           String     @id @default(uuid())
+  day          String
+  room         String?
+  subject      String?    // Specific subject for this period
+  teacherId    String?
+  sectionId    String
+  timePeriodId String
+  teacher      Teacher?   @relation(fields: [teacherId], references: [id], onDelete: Cascade)
+  section      Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  timePeriod   TimePeriod @relation(fields: [timePeriodId], references: [id], onDelete: Cascade)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+
+  @@unique([sectionId, day, timePeriodId])
+  @@index([teacherId, day, timePeriodId])
+  @@index([sectionId])
+}
+
+model SchoolSettings {
+  id        String   @id @default(uuid())
+  startTime String
+  endTime   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
